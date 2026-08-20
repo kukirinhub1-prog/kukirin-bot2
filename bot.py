@@ -267,3 +267,19 @@ if __name__ == '__main__':
         except Exception as e:
             print(f"⚠️ Збій зв'язку: {e}. Перепідключення через 5 сек...")
             time.sleep(5)
+from http.server import HTTPServer, BaseHTTPRequestHandler
+import threading
+
+class SimpleHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"Bot is running!")
+
+def run_web():
+    server = HTTPServer(('0.0.0.0', 10000), SimpleHandler)
+    server.serve_forever()
+
+# Запускаємо вебсервер у фоновому потоці, щоб Render бачив відкритий порт
+web_thread = threading.Thread(target=run_web, daemon=True)
+web_thread.start()
