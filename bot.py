@@ -388,6 +388,6 @@ if __name__ == '__main__':
     bot_thread = threading.Thread(target=run_bot, daemon=True)
     bot_thread.start()
     
-    root = tk.Tk()
+    
     app = AdminApp(root)
-    root.mainloop()
+    
