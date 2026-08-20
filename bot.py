@@ -6,7 +6,6 @@ import csv
 import os
 from datetime import datetime
 import threading
-import tkinter as tk
 from tkinter import messagebox, ttk, filedialog
 
 TOKEN = '8628639179:AAHKiLkF93MX1kqhXLDTiv7YpRcg5bncpAk'
