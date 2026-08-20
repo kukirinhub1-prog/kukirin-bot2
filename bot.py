@@ -298,3 +298,29 @@ def run_web():
 
 web_thread = threading.Thread(target=run_web, daemon=True)
 web_thread.start()
+@bot.callback_query_handler(func=lambda call: call.data.startswith('accept_'))
+def admin_accept(call):
+    chat_id = int(call.data.split('_')[1])
+    
+    if chat_id in admin_temp_data:
+        data = admin_temp_data[chat_id]
+        
+        # Записуємо в базу
+        save_to_database(chat_id, data)
+        
+        # Формуємо повідомлення для тебе в чат
+        order_text = (
+            f"✅ **Нове підтверджене замовлення!**\n\n"
+            f"👤 Ім'я: {data.get('name')}\n"
+            f"📞 Телефон: {data.get('phone')}\n"
+            f"🛴 Товар: {data.get('product')}\n"
+            f"📍 Адреса: {data.get('address')}"
+        )
+        
+        # Надсилаємо тобі в адмін-чат (заміни YOUR_ADMIN_ID на свій ID)
+        bot.send_message(call.message.chat.id, order_text, parse_mode="Markdown")
+        
+        bot.answer_callback_query(call.id, "Замовлення прийнято і надіслано в чат!")
+        admin_temp_data.pop(chat_id, None)
+    else:
+        bot.answer_callback_query(call.id, "Помилка: замовлення вже оброблене або не знайдено.")
