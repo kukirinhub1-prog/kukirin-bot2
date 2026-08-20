@@ -283,3 +283,18 @@ def run_web():
 # Запускаємо вебсервер у фоновому потоці, щоб Render бачив відкритий порт
 web_thread = threading.Thread(target=run_web, daemon=True)
 web_thread.start()
+from http.server import HTTPServer, BaseHTTPRequestHandler
+import threading
+
+class SimpleHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"Bot is running!")
+
+def run_web():
+    server = HTTPServer(('0.0.0.0', 10000), SimpleHandler)
+    server.serve_forever()
+
+web_thread = threading.Thread(target=run_web, daemon=True)
+web_thread.start()
