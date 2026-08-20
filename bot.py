@@ -7,7 +7,6 @@ import os
 from datetime import datetime
 import threading
 
-
 TOKEN = '8628639179:AAHKiLkF93MX1kqhXLDTiv7YpRcg5bncpAk'
 MY_ADMIN_ID = 1794972022  # Твій Telegram ID
 
@@ -45,25 +44,6 @@ def save_to_database(chat_id, data):
         print(f"✅ Замовлення від {chat_id} успішно записано в базу!")
     except Exception as e:
         print(f"❌ ПОМИЛКА збереження: {e}")
-
-def load_orders():
-    if not os.path.exists(FILENAME):
-        return []
-    orders = []
-    with open(FILENAME, mode="r", encoding="utf-8-sig") as file:
-        reader = csv.reader(file, delimiter=";")
-        next(reader, None)
-        for row in reader:
-            if row:
-                orders.append(row)
-    return orders
-
-def save_all_orders(orders):
-    with open(FILENAME, mode="w", encoding="utf-8-sig", newline="") as file:
-        writer = csv.writer(file, delimiter=";")
-        writer.writerow(["Дата", "ID клієнта", "ПІБ", "Телефон", "Товар", "Місто", "Пошта"])
-        for order in orders:
-            writer.writerow(order)
 
 def get_cancel_markup():
     markup = types.InlineKeyboardMarkup()
@@ -279,103 +259,7 @@ def process_admin_cancel_reason(message):
         pass
     admin_temp_data.pop(admin_id, None)
 
-# Графічна панель адміністратора (Tkinter)
-class AdminApp:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("Kukirin Hub — Панель замовлень")
-        self.root.geometry("980x520")
-        
-        self.title_label = tk.Label(root, text="📦 Активні замовлення клієнтів (0)", font=("Arial", 15, "bold"))
-        self.title_label.pack(pady=10)
-        
-        columns = ("Дата", "ID клієнта", "ПІБ", "Телефон", "Товар", "Місто", "Пошта")
-        self.tree = ttk.Treeview(root, columns=columns, show="headings", height=12)
-        
-        for col in columns:
-            self.tree.heading(col, text=col)
-            self.tree.column(col, width=125, anchor=tk.CENTER)
-            
-        self.tree.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
-        
-        btn_frame = tk.Frame(root)
-        btn_frame.pack(pady=10)
-        
-        refresh_btn = tk.Button(btn_frame, text="🔄 Оновити", font=("Arial", 10, "bold"), command=self.populate_table, bg="#e0e0e0", width=12)
-        refresh_btn.pack(side=tk.LEFT, padx=5)
-        
-        complete_btn = tk.Button(btn_frame, text="✅ Виконано", font=("Arial", 10, "bold"), command=self.complete_order, bg="#d4edda", width=14)
-        complete_btn.pack(side=tk.LEFT, padx=5)
-
-        export_btn = tk.Button(btn_frame, text="📊 Експорт в Excel", font=("Arial", 10, "bold"), command=self.export_excel, bg="#cce5ff", width=16)
-        export_btn.pack(side=tk.LEFT, padx=5)
-
-        clear_all_btn = tk.Button(btn_frame, text="🗑 Видалити все", font=("Arial", 10, "bold"), command=self.clear_all, bg="#f8d7da", width=15)
-        clear_all_btn.pack(side=tk.LEFT, padx=5)
-        
-        self.populate_table()
-
-    def populate_table(self):
-        for item in self.tree.get_children():
-            self.tree.delete(item)
-        orders = load_orders()
-        for order in orders:
-            self.tree.insert("", tk.END, values=order)
-        self.title_label.config(text=f"📦 Активні замовлення клієнтів ({len(orders)})")
-
-    def complete_order(self):
-        selected_item = self.tree.selection()
-        if not selected_item:
-            messagebox.showwarning("Увага", "Вибери замовлення зі списку!")
-            return
-            
-        if messagebox.askyesno("Підтвердження", "Позначити це замовлення як виконане і видалити зі списку?"):
-            values = self.tree.item(selected_item, "values")
-            client_chat_id = values[1]  # Беремо ID клієнта з другої колонки
-            
-            # Пишемо повідомлення клієнту в Telegram
-            success_text = (
-                "🚀 **Ваше замовлення успішно виконано!**\n\n"
-                "Дякуємо, що обрали **Kukirin Hub** ⚡️\n"
-                "Нехай поїздки приносять лише задоволення! Якщо знадобляться ще якісь запчастини чи тюнінг — ми завжди на зв'язку. Ровер та самокат під надійним контролем! 🔥"
-            )
-            safe_send_message(int(client_chat_id), success_text, parse_mode="Markdown")
-
-            # Видаляємо з бази та оновлюємо таблицю
-            orders = load_orders()
-            updated_orders = [o for o in orders if o[0] != values[0] or o[1] != values[1]]
-            save_all_orders(updated_orders)
-            self.populate_table()
-            messagebox.showinfo("Успіх", "Замовлення виконано, клієнту надіслано сповіщення!")
-
-    def export_excel(self):
-        orders = load_orders()
-        if not orders:
-            messagebox.showwarning("Увага", "Немає замовлень для експорту!")
-            return
-        file_path = filedialog.asksaveasfilename(defaultextension=".csv", filetypes=[("CSV files", "*.csv"), ("All files", "*.xlsx")], title="Зберегти як")
-        if file_path:
-            try:
-                with open(file_path, mode="w", encoding="utf-8-sig", newline="") as file:
-                    writer = csv.writer(file, delimiter=";")
-                    writer.writerow(["Дата", "ID клієнта", "ПІБ", "Телефон", "Товар", "Місто", "Пошта"])
-                    writer.writerows(orders)
-                messagebox.showinfo("Успіх", "Базу успішно експортовано!")
-            except Exception as e:
-                messagebox.showerror("Помилка", f"Не вдалося зберегти файл: {e}")
-
-    def clear_all(self):
-        orders = load_orders()
-        if not orders:
-            messagebox.showwarning("Увага", "База і так порожня!")
-            return
-        if messagebox.askyesno("УВАГА!", "Ви впевнені, що хочете видалити ВСІ замовлення?"):
-            if os.path.exists(FILENAME):
-                os.remove(FILENAME)
-            self.populate_table()
-            messagebox.showinfo("Успіх", "Всі замовлення видалено!")
-
-def run_bot():
+if __name__ == '__main__':
     print("Бот запущено і працює...")
     while True:
         try:
@@ -383,11 +267,3 @@ def run_bot():
         except Exception as e:
             print(f"⚠️ Збій зв'язку: {e}. Перепідключення через 5 сек...")
             time.sleep(5)
-
-if __name__ == '__main__':
-    bot_thread = threading.Thread(target=run_bot, daemon=True)
-    bot_thread.start()
-    
-    
-    app = AdminApp(root)
-    
